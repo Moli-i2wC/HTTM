@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>横向滚动卡片 · 固定首页</title>
+<style>
+  :root{
+    --bg:#0a0c14;
+    --text:#e9ecf5;
+    --muted:#8b93a7;
+    --accent:#6c8cff;
+    --accent2:#c06cff;
+    --radius:24px;
+    --page-pad: clamp(1.5rem, 5vw, 5rem);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{
+    height:100%;
+    overflow:hidden;
+    background:var(--bg);
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  /* ============ 固定舞台 ============ */
+  .stage{
+    position:fixed;
+    inset:0;
+    overflow:hidden;
+    background:
+      radial-gradient(60% 55% at 50% 15%, rgba(108,140,255,.16), transparent 70%),
+      radial-gradient(45% 45% at 82% 80%, rgba(192,108,255,.12), transparent 70%);
+  }
+
+  /* ============ 开场引导 ============ */
+  .hero{
+    position:absolute;
+    top:50%;left:50%;
+    transform:translate(-50%,-50%);
+    z-index:5;
+    width:min(680px,88vw);
+    text-align:center;
+    pointer-events:none;
+    will-change:opacity,transform;
+  }
+  .hero h1{
+    font-size:clamp(2rem,6vw,4rem);
+    font-weight:800;
+    letter-spacing:-.03em;
+    line-height:1.1;
+    background:linear-gradient(115deg,#fff 10%,#9db2ff 55%,#d2a8ff 95%);
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+  }
+  .hero p{
+    margin-top:1.1rem;
+    color:var(--muted);
+    font-size:clamp(.92rem,2vw,1.1rem);
+    line-height:1.85;
+  }
+  .hero .hint{
+    display:inline-flex;
+    flex-direction:column;
+    align-items:center;
+    gap:.55rem;
+    margin-top:2.6rem;
+    font-size:.72rem;
+    letter-spacing:.24em;
+    color:var(--muted);
+    animation:hintPulse 2s ease-in-out infinite;
+  }
+  .mouse{
+    width:24px;height:40px;
+    border:2px solid rgba(255,255,255,.22);
+    border-radius:14px;
+    position:relative;
+  }
+  .mouse::after{
+    content:"";
+    position:absolute;left:50%;top:7px;
+    width:4px;height:8px;margin-left:-2px;
+    border-radius:2px;background:var(--accent);
+    animation:wheel 1.7s ease-in-out infinite;
+  }
+  @keyframes wheel{
+    0%{opacity:0;transform:translateY(0)}
+    25%{opacity:1}
+    70%{opacity:1;transform:translateY(15px)}
+    100%{opacity:0;transform:translateY(18px)}
+  }
+  @keyframes hintPulse{
+    0%,100%{opacity:.6}
+    50%{opacity:1}
+  }
+
+  /* ============ 卡片轨道 ============ */
+  .track{
+    position:absolute;
+    top:50%;left:0;
+    display:flex;
+    align-items:center;
+    gap:clamp(1rem,2.5vw,2rem);
+    padding-left:var(--page-pad);
+    padding-right:var(--page-pad);
+    transform:translate3d(0,-50%,0);
+    will-change:transform;
+    z-index:4;
+  }
+
+  /* ---------- 卡片（本身即链接） ---------- */
+  .card{
+    --d:0;
+    --c1:rgba(108,140,255,.55);
+    flex:0 0 clamp(230px,26vw,320px);
+    height:clamp(310px,56vh,420px);
+    padding:1.8rem 1.6rem;
+    border-radius:var(--radius);
+    background:rgba(255,255,255,.045);
+    border:1px solid rgba(255,255,255,.09);
+    backdrop-filter:blur(14px);
+    -webkit-backdrop-filter:blur(14px);
+    display:flex;
+    flex-direction:column;
+    position:relative;
+    overflow:hidden;
+    text-decoration:none;
+    color:inherit;
+    transform:scale(calc(1 - var(--d) * .10));
+    opacity:calc(1 - var(--d) * .50);
+    transition:border-color .35s ease, background .35s ease, box-shadow .35s ease;
+    will-change:transform,opacity;
+    cursor:pointer;
+  }
+  .card::before{
+    content:"";
+    position:absolute;
+    inset:0;
+    border-radius:inherit;
+    background:linear-gradient(150deg,var(--c1),transparent 55%);
+    opacity:.18;
+    pointer-events:none;
+  }
+  .card:hover{
+    border-color:rgba(255,255,255,.32);
+    background:rgba(255,255,255,.08);
+    box-shadow:0 18px 50px -18px var(--c1);
+  }
+  .card:hover .card-arrow{
+    transform:translateX(5px);
+    opacity:1;
+  }
+  .card .num{
+    font-size:.72rem;
+    letter-spacing:.28em;
+    color:var(--muted);
+  }
+  .card-main{margin-top:auto;margin-bottom:1.3rem}
+  .card h3{
+    font-size:clamp(1.2rem,2.2vw,1.55rem);
+    font-weight:700;
+    letter-spacing:-.01em;
+  }
+  .card p{
+    margin-top:.7rem;
+    font-size:.86rem;
+    line-height:1.75;
+    color:var(--muted);
+  }
+  .card .tags{display:flex;gap:.5rem;flex-wrap:wrap}
+  .card .tags span{
+    font-size:.72rem;
+    padding:.28rem .68rem;
+    border-radius:999px;
+    background:rgba(255,255,255,.07);
+    border:1px solid rgba(255,255,255,.08);
+    color:#b9c0d4;
+  }
+  .card-arrow{
+    position:absolute;
+    top:1.6rem;right:1.6rem;
+    font-size:1rem;
+    color:var(--muted);
+    opacity:.5;
+    transition:transform .3s ease, opacity .3s ease;
+  }
+
+  /* ============ 进度条 ============ */
+  .progress{
+    position:absolute;
+    left:50%;
+    bottom:2.5rem;
+    transform:translateX(-50%);
+    width:min(320px,55vw);
+    height:3px;
+    border-radius:99px;
+    background:rgba(255,255,255,.09);
+    overflow:hidden;
+    z-index:10;
+  }
+  .progress i{
+    display:block;
+    height:100%;
+    width:0;
+    border-radius:99px;
+    background:linear-gradient(90deg,var(--accent),var(--accent2));
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .mouse::after, .hero .hint{animation:none}
+  }
+
+  @media (max-width:640px){
+    .card{flex:0 0 76vw;height:56vh}
+  }
+</style>
+</head>
+<body>
+
+  <div class="stage">
+
+    <!-- 开场引导 -->
+    <div class="hero" id="hero">
+      <h1>你好，欢迎来到这里</h1>
+      <p>向下滚动，卡片会从右侧依次展开。每一张卡片都是一个入口，点进去看看不同的章节。</p>
+      <div class="hint">
+        <div class="mouse"></div>
+        <span>SCROLL</span>
+      </div>
+    </div>
+
+    <!-- 卡片轨道：每张卡片都是指向独立 HTML 文件的链接 -->
+    <div class="track" id="track">
+
+      <a class="card" href="home.html" style="--c1:rgba(108,140,255,.55)">
+        <span class="num">01</span>
+        <span class="card-arrow">→</span>
+        <div class="card-main">
+          <h3>首页</h3>
+          <p>回到起点，看看这个站点最近的样子。</p>
+        </div>
+        <div class="tags"><span>Home</span></div>
+      </a>
+
+      <a class="card" href="projects.html" style="--c1:rgba(192,108,255,.55)">
+        <span class="num">02</span>
+        <span class="card-arrow">→</span>
+        <div class="card-main">
+          <h3>历史项目</h3>
+          <p>过去做过的一些东西，有些完成了，有些还在路上。</p>
+        </div>
+        <div class="tags"><span>Projects</span></div>
+      </a>
+
+      <a class="card" href="awards.html" style="--c1:rgba(255,170,90,.55)">
+        <span class="num">03</span>
+        <span class="card-arrow">→</span>
+        <div class="card-main">
+          <h3>奖项</h3>
+          <p>拿过的一些小成绩，记录一下，也算给自己一点鼓励。</p>
+        </div>
+        <div class="tags"><span>Awards</span></div>
+      </a>
+
+      <a class="card" href="profile.html" style="--c1:rgba(80,220,190,.55)">
+        <span class="num">04</span>
+        <span class="card-arrow">→</span>
+        <div class="card-main">
+          <h3>个人信息</h3>
+          <p>关于我的一些基本信息和联系方式，欢迎来聊。</p>
+        </div>
+        <div class="tags"><span>Profile</span></div>
+      </a>
+
+    </div>
+
+    <!-- 进度条 -->
+    <div class="progress"><i id="bar"></i></div>
+
+  </div>
+
+<script>
+(function () {
+  const track = document.getElementById('track');
+  const bar   = document.getElementById('bar');
+  const hero  = document.getElementById('hero');
+  const cards = Array.from(document.querySelectorAll('.card'));
+
+  /* --------------------------------------------------
+     核心参数
+     --------------------------------------------------
+     startX : 初始位移。卡片区左边缘刚好在屏幕右侧外，
+              第一张卡片从右侧「出现」。
+     endX   : 结束位移。最后一张卡片中心落在屏幕正中。
+     range  : 总滚动距离 = startX - endX
+     -------------------------------------------------- */
+  let startX = 0;
+  let endX   = 0;
+  let range  = 0;
+  let target = 0;
+  let current = 0;
+  let lastPainted = null;
+
+  /* ---------- 测量 ---------- */
+  function measure() {
+    const cs       = getComputedStyle(track);
+    const padLeft  = parseFloat(cs.paddingLeft)  || 0;
+    const padRight = parseFloat(cs.paddingRight) || 0;
+
+    const lastCard = cards[cards.length - 1];
+    const lastW    = lastCard.offsetWidth;
+    const contentW = track.scrollWidth;
+
+    // 1) 初始：卡片区左边缘对齐屏幕右边缘
+    startX = window.innerWidth - padLeft;
+
+    // 2) 结束：最后一张卡片中心 = 屏幕水平中心
+    endX = window.innerWidth / 2 - (contentW - padRight - lastW / 2);
+
+    range = startX - endX;
+    if (range < 0) range = 0;
+  }
+
+  /* ---------- 应用位移 ---------- */
+  function applyTransform(p) {
+    const x = startX + (endX - startX) * p;
+    track.style.transform = 'translate3d(' + x + 'px, -50%, 0)';
+  }
+
+  /* ---------- 卡片焦点效果 ---------- */
+  function paintCards() {
+    const mid  = window.innerWidth / 2;
+    const half = window.innerWidth * 0.7;
+    for (let i = 0; i < cards.length; i++) {
+      const r = cards[i].getBoundingClientRect();
+      const d = Math.min(Math.abs(r.left + r.width / 2 - mid) / half, 1);
+      cards[i].style.setProperty('--d', d.toFixed(3));
+    }
+  }
+
+  /* ---------- 开场引导淡出 ---------- */
+  function paintHero(p) {
+    const heroP = Math.min(p / 0.18, 1);
+    hero.style.opacity = 1 - heroP;
+    hero.style.transform = 'translate(-50%, -50%) scale(' + (1 - heroP * 0.06) + ')';
+    hero.style.visibility = heroP >= 1 ? 'hidden' : 'visible';
+  }
+
+  /* ---------- 主循环 ---------- */
+  function loop() {
+    current += (target - current) * 0.12;
+    if (Math.abs(target - current) < 0.05) current = target;
+
+    if (current !== lastPainted) {
+      const p = range > 0 ? Math.min(Math.max(current / range, 0), 1) : 0;
+      applyTransform(p);
+      paintCards();
+      paintHero(p);
+      bar.style.width = (p * 100) + '%';
+      lastPainted = current;
+    }
+    requestAnimationFrame(loop);
+  }
+
+  /* ---------- 滚轮：纵向 → 横向 ---------- */
+  window.addEventListener('wheel', function (e) {
+    e.preventDefault();
+
+    let delta = e.deltaY;
+    if (e.deltaMode === 1) delta *= 16;
+    else if (e.deltaMode === 2) delta *= window.innerHeight;
+
+    target = Math.max(0, Math.min(range, target + delta));
+  }, { passive: false });
+
+  /* ---------- 触摸支持 ---------- */
+  let touchStartY = 0;
+  let touchStartTarget = 0;
+
+  window.addEventListener('touchstart', function (e) {
+    touchStartY = e.touches[0].clientY;
+    touchStartTarget = target;
+  }, { passive: true });
+
+  window.addEventListener('touchmove', function (e) {
+    e.preventDefault();
+    const dy = touchStartY - e.touches[0].clientY;
+    target = Math.max(0, Math.min(range, touchStartTarget + dy * 1.5));
+  }, { passive: false });
+
+  /* ---------- 尺寸变化 ---------- */
+  window.addEventListener('resize', function () {
+    measure();
+    target  = Math.min(target, range);
+    current = Math.min(current, range);
+    lastPainted = null;
+  });
+
+  /* ---------- 启动 ---------- */
+  measure();
+  applyTransform(0);
+  paintHero(0);
+  loop();
+})();
+</script>
+</body>
+</html>

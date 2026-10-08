@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>奖项 · Awards</title>
+<style>
+  :root{
+    --paper:#faf5ea;
+    --paper-2:#f2ead9;
+    --ink:#2a251e;
+    --ink-muted:#7c7264;
+    --line:rgba(255,255,255,.08);
+    --page-pad:clamp(1.2rem,5vw,4rem);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    background-color:#0d0f15;
+    color:#e9ecf5;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    -webkit-font-smoothing:antialiased;
+    min-height:100%;
+    position:relative;
+  }
+
+  /* ============ 随机方块背景 ============ */
+  #wall-bg{
+    position:fixed;
+    inset:0;
+    width:100%;
+    height:100%;
+    z-index:0;
+    image-rendering:pixelated;
+    image-rendering:crisp-edges;
+  }
+  .overlay{
+    position:fixed;
+    inset:0;
+    z-index:1;
+    pointer-events:none;
+    background:
+      radial-gradient(75% 55% at 50% 0%, rgba(10,12,20,.30), rgba(10,12,20,.72) 78%),
+      linear-gradient(180deg, rgba(10,12,20,.42), rgba(10,12,20,.70));
+  }
+
+  /* ============ 顶部栏 ============ */
+  .topbar{
+    position:sticky;top:0;z-index:50;
+    display:flex;align-items:center;gap:1rem;
+    padding:.95rem var(--page-pad);
+    background:rgba(14,16,23,.55);
+    backdrop-filter:blur(16px);
+    -webkit-backdrop-filter:blur(16px);
+    border-bottom:1px solid var(--line);
+  }
+  .back{
+    display:inline-flex;align-items:center;gap:.4rem;
+    padding:.4rem .85rem;
+    font-size:.84rem;color:#c3cad9;text-decoration:none;
+    border:1px solid var(--line);border-radius:999px;
+    background:rgba(255,255,255,.03);
+    transition:color .25s, border-color .25s, background .25s;
+  }
+  .back:hover{color:#fff;border-color:rgba(255,255,255,.25);background:rgba(255,255,255,.07)}
+  .crumb{font-size:.84rem;color:#8b93a7;letter-spacing:.08em}
+
+  /* ============ 页头 ============ */
+  .page-head{
+    position:relative;z-index:2;
+    padding:clamp(3rem,9vh,6rem) var(--page-pad) clamp(2rem,5vh,3.4rem);
+    max-width:1400px;margin:0 auto;
+  }
+  .page-head h1{
+    font-size:clamp(2.4rem,7vw,4.6rem);
+    font-weight:800;letter-spacing:-.035em;line-height:1;
+    background:linear-gradient(115deg,#ffffff 8%,#9db2ff 55%,#d2a8ff 98%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .page-head .sub{
+    margin-top:1rem;
+    font-size:clamp(.92rem,2vw,1.08rem);line-height:1.8;
+    color:#9aa2b5;max-width:36em;
+  }
+  .stats{display:flex;flex-wrap:wrap;gap:.6rem;margin-top:1.8rem}
+  .stats span{
+    font-size:.78rem;color:#aab2c5;
+    padding:.4rem .9rem;border-radius:999px;
+    border:1px solid var(--line);background:rgba(255,255,255,.05);
+    backdrop-filter:blur(8px);
+  }
+  .stats b{color:#fff;font-weight:700;margin-right:.15rem}
+
+  /* ============ 墙 ============ */
+  .wall{
+    position:relative;z-index:2;
+    max-width:1400px;margin:0 auto;
+    padding:0 var(--page-pad) clamp(4rem,10vh,7rem);
+  }
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(276px, 1fr));
+    gap:clamp(2rem,4vw,3.2rem);
+    align-items:start;
+  }
+
+  .award{
+    opacity:0;transform:translateY(34px);
+    transition:opacity .75s ease, transform .75s cubic-bezier(.2,.8,.3,1);
+  }
+  .award.in{opacity:1;transform:none}
+
+  /* ---------- 纸张 ---------- */
+  .paper{
+    position:relative;
+    background:linear-gradient(165deg,var(--paper) 0%, var(--paper-2) 100%);
+    border-radius:3px;
+    padding:2.3rem 1.5rem 1.5rem;
+    color:var(--ink);
+    transform:rotate(var(--rot, 0deg));
+    transition:transform .42s cubic-bezier(.2,.8,.25,1), box-shadow .42s ease;
+    box-shadow:0 1px 1px rgba(0,0,0,.35), 0 14px 30px -10px rgba(0,0,0,.75);
+    will-change:transform;
+  }
+  .paper:hover{
+    transform:rotate(0deg) translateY(-9px) scale(1.032);
+    box-shadow:0 2px 3px rgba(0,0,0,.3), 0 32px 60px -16px rgba(0,0,0,.9);
+    z-index:3;
+  }
+  .paper::before{
+    content:"";position:absolute;inset:0;border-radius:inherit;
+    background:linear-gradient(180deg, rgba(255,255,255,.65), transparent 16%);
+    opacity:.55;pointer-events:none;
+  }
+  .paper::after{
+    content:"";position:absolute;inset:0;border-radius:inherit;
+    background-image:radial-gradient(rgba(0,0,0,.035) 1px, transparent 1px);
+    background-size:4px 4px;opacity:.7;pointer-events:none;
+  }
+
+  .pin{
+    position:absolute;top:-8px;left:50%;
+    width:17px;height:17px;margin-left:-8.5px;border-radius:50%;
+    background:
+      radial-gradient(circle at 33% 27%, rgba(255,255,255,.8), transparent 44%),
+      var(--pin, #e0574f);
+    box-shadow:0 3px 5px rgba(0,0,0,.65), inset 0 -1px 3px rgba(0,0,0,.35);
+    z-index:5;
+  }
+
+  .meta{
+    display:flex;align-items:baseline;gap:.6rem;
+    font-size:.72rem;letter-spacing:.18em;
+    color:var(--ink-muted);text-transform:uppercase;
+  }
+  .meta .kind{
+    padding:.14rem .5rem;border-radius:999px;
+    border:1px solid rgba(0,0,0,.14);
+    font-size:.66rem;letter-spacing:.1em;
+  }
+  .paper h3{
+    margin-top:1.15rem;
+    font-size:1.02rem;font-weight:700;line-height:1.5;
+    letter-spacing:-.005em;padding-right:3.2rem;
+  }
+  .level{
+    margin-top:1.15rem;
+    font-size:1.28rem;font-weight:800;letter-spacing:.02em;
+  }
+  .level.gold{
+    background:linear-gradient(100deg,#c9a227,#e8c85a 45%,#b8860b);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .org{margin-top:.55rem;font-size:.8rem;line-height:1.6;color:var(--ink-muted)}
+  .paper .rule{margin-top:1.3rem;height:1px;background:linear-gradient(90deg, rgba(0,0,0,.14), transparent)}
+
+  .seal{
+    position:absolute;right:1.15rem;bottom:1.15rem;
+    width:44px;height:44px;border-radius:50%;
+    border:2px solid rgba(190,58,48,.5);
+    color:rgba(190,58,48,.72);
+    display:grid;place-content:center;
+    font-size:.66rem;font-weight:700;letter-spacing:.04em;line-height:1.15;
+    text-align:center;transform:rotate(-13deg);opacity:.9;pointer-events:none;
+  }
+
+  /* ============ 页脚 ============ */
+  .foot{
+    position:relative;z-index:2;
+    max-width:1400px;margin:0 auto;
+    padding:0 var(--page-pad) clamp(4rem,12vh,8rem);
+    color:#7b8496;font-size:.9rem;line-height:1.9;
+  }
+  .foot p{padding-top:2.5rem;border-top:1px solid var(--line)}
+
+  @media (max-width:640px){
+    .paper{--rot:0deg !important}
+    .paper:hover{transform:translateY(-6px) scale(1.02)}
+    .grid{grid-template-columns:1fr;gap:2.4rem}
+    .paper{padding:2rem 1.3rem 1.3rem}
+  }
+  @media (prefers-reduced-motion: reduce){
+    .award{opacity:1;transform:none;transition:none}
+    .paper{transition:none}
+  }
+</style>
+</head>
+<body>
+
+  <canvas id="wall-bg"></canvas>
+  <div class="overlay"></div>
+
+  <nav class="topbar">
+    <a class="back" href="index.html">← 返回首页</a>
+    <span class="crumb">奖项</span>
+  </nav>
+
+  <header class="page-head">
+    <h1>奖项</h1>
+    <p class="sub">墙上贴着的，是这些年走过的一些节点。有些纸已经有点卷边了，但每次路过还是会看一眼。</p>
+    <div class="stats">
+      <span><b>1</b> 项荣誉</span>
+      <span><b>90+</b> 最高分</span>
+      <span><b>2026</b></span>
+    </div>
+  </header>
+
+  <main class="wall">
+    <div class="grid">
+
+      <article class="award">
+        <div class="paper" style="--rot:-1.6deg">
+          <span class="pin" style="--pin:#3fae82"></span>
+          <div class="meta">
+            <span class="year">2026</span>
+            <span class="kind">认证</span>
+          </div>
+          <h3>GESP 编程能力等级认证 C++ 五级</h3>
+          <p class="level gold">高于 90 分</p>
+          <p class="org">中国计算机学会 · 跳级通过</p>
+          <div class="rule"></div>
+          <span class="seal">跳级</span>
+        </div>
+      </article>
+
+    </div>
+  </main>
+
+  <footer class="foot">
+    <p>继续往前走，墙上还会多几张纸。</p>
+  </footer>
+
+<script>
+(function () {
+  /* ==========================================================
+     方块图片清单
+     ----------------------------------------------------------
+     图片放在 tiles/ 目录下，和 awards.html 同级。
+     加载失败的方块会回退为灰色，不影响运行。
+     ========================================================== */
+  const TILE_DIR = 'tiles/';
+
+  const ALL_TILES = [
+    'stone',
+    'stone_bricks',
+    'mossy_stone_bricks',
+    'cracked_stone_bricks',
+    'chiseled_stone_bricks',
+    'diorite',
+    'calcite',
+    'dead_brain_coral_block',
+    'dead_fire_coral_block',
+    'dead_horn_coral_block'
+  ];
+
+  /* ==========================================================
+     造墙参数
+     ----------------------------------------------------------
+     这些数字对应你描述的 4 步流程。
+     ========================================================== */
+  const P_STONE_BRICKS = 0.50;   // 石砖铺满的比例
+  const P_MOSSY        = 0.15;   // 苔石砖替换石砖的比例（在已铺石砖上）
+  const P_CHISELED     = 0.08;   // 雕纹石砖替换石砖的比例
+  const P_CRACKED      = 0.08;   // 裂纹石砖替换石砖的比例
+  const P_SPECIAL      = 0.045;  // 每格尝试撒特殊方块的几率
+
+  // 特殊方块池：闪长岩和方解石权重稍高，珊瑚更稀有
+  const SPECIAL_POOL = [
+    'calcite', 'calcite',
+    'diorite', 'diorite',
+    'dead_brain_coral_block',
+    'dead_fire_coral_block',
+    'dead_horn_coral_block'
+  ];
+
+  const SPECIAL_SET = new Set(SPECIAL_POOL);
+
+  /* ==========================================================
+     造墙核心
+     ----------------------------------------------------------
+     严格按 4 步走：
+       1. 石头铺满
+       2. 石砖系列覆盖
+       3. 雕纹/裂纹石砖替换
+       4. 特殊方块撒入（带相邻检查）
+     ========================================================== */
+  function generateWall(cols, rows) {
+    const grid = new Array(rows);
+
+    /* ---------- 第 1 步：石头铺满 ---------- */
+    for (let r = 0; r < rows; r++) {
+      grid[r] = new Array(cols).fill('stone');
+    }
+
+    /* ---------- 第 2 步：石砖系列覆盖 ---------- */
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const roll = Math.random();
+        if (roll < P_STONE_BRICKS) {
+          grid[r][c] = 'stone_bricks';
+        } else if (roll < P_STONE_BRICKS + P_MOSSY) {
+          grid[r][c] = 'mossy_stone_bricks';
+        }
+        // 其余保持 stone，露出来当缝隙
+      }
+    }
+
+    /* ---------- 第 3 步：雕纹 / 裂纹石砖随机分布 ---------- */
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        if (grid[r][c] !== 'stone_bricks') continue;
+
+        const roll = Math.random();
+        if (roll < P_CHISELED) {
+          // 雕纹石砖：不能和别的雕纹石砖扎堆
+          if (!hasChiseledNeighbor(grid, r, c)) {
+            grid[r][c] = 'chiseled_stone_bricks';
+          }
+        } else if (roll < P_CHISELED + P_CRACKED) {
+          grid[r][c] = 'cracked_stone_bricks';
+        }
+      }
+    }
+
+    /* ---------- 第 4 步：撒特殊方块 ---------- */
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        if (SPECIAL_SET.has(grid[r][c])) continue;
+        if (Math.random() >= P_SPECIAL) continue;
+
+        // 相邻检查：特殊方块周围不能有别的特殊方块
+        if (hasSpecialNeighbor(grid, r, c)) continue;
+
+        // 也不能贴着雕纹石砖太近，避免视觉上打架
+        if (hasChiseledNeighbor(grid, r, c)) continue;
+
+        const pick = SPECIAL_POOL[(Math.random() * SPECIAL_POOL.length) | 0];
+        grid[r][c] = pick;
+      }
+    }
+
+    return grid;
+  }
+
+  /* ---------- 相邻检查工具 ---------- */
+  const DIRS = [[-1,0],[1,0],[0,-1],[0,1]];
+
+  function hasChiseledNeighbor(grid, r, c) {
+    for (let i = 0; i < DIRS.length; i++) {
+      const nr = r + DIRS[i][0];
+      const nc = c + DIRS[i][1];
+      if (grid[nr] && grid[nr][nc] === 'chiseled_stone_bricks') return true;
+    }
+    return false;
+  }
+
+  function hasSpecialNeighbor(grid, r, c) {
+    for (let i = 0; i < DIRS.length; i++) {
+      const nr = r + DIRS[i][0];
+      const nc = c + DIRS[i][1];
+      if (grid[nr] && SPECIAL_SET.has(grid[nr][nc])) return true;
+    }
+    return false;
+  }
+
+  /* ==========================================================
+     Canvas 绘制
+     ========================================================== */
+  const canvas = document.getElementById('wall-bg');
+  const ctx    = canvas.getContext('2d');
+
+  const images = {};
+  let loaded = false;
+
+  function loadImage(src) {
+    return new Promise(function (resolve) {
+      const img = new Image();
+      img.onload  = function () { resolve(img); };
+      img.onerror = function () { resolve(null); };
+      img.src = src;
+    });
+  }
+
+  function draw() {
+    if (!loaded) return;
+
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const w   = window.innerWidth;
+    const h   = window.innerHeight;
+
+    canvas.width  = Math.floor(w * dpr);
+    canvas.height = Math.floor(h * dpr);
+    canvas.style.width  = w + 'px';
+    canvas.style.height = h + 'px';
+
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.imageSmoothingEnabled = false;
+
+    const size = w < 700 ? 44 : 64;
+    const cols = Math.ceil(w / size);
+    const rows = Math.ceil(h / size);
+
+    // 每次重绘都重新造一次墙，保证随机但结构合理
+    const wall = generateWall(cols, rows);
+
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const name = wall[r][c];
+        const img  = images[name];
+        const x = c * size;
+        const y = r * size;
+
+        if (img) {
+          ctx.drawImage(img, x, y, size, size);
+        } else {
+          ctx.fillStyle = '#5f6266';
+          ctx.fillRect(x, y, size, size);
+        }
+
+        // 确定性微阴影：让拼贴更有层次，同时每次重绘一致
+        const shade = (((r * 73 + c * 137) % 100) / 100) * 0.14;
+        ctx.fillStyle = 'rgba(0,0,0,' + shade.toFixed(3) + ')';
+        ctx.fillRect(x, y, size, size);
+      }
+    }
+  }
+
+  /* ---------- 启动 ---------- */
+  async function init() {
+    const imgs = await Promise.all(
+      ALL_TILES.map(function (n) { return loadImage(TILE_DIR + n + '.png'); })
+    );
+    ALL_TILES.forEach(function (n, i) { images[n] = imgs[i]; });
+
+    loaded = true;
+    draw();
+  }
+
+  let resizeTimer = null;
+  window.addEventListener('resize', function () {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(draw, 180);
+  });
+
+  init();
+
+  /* ==========================================================
+     奖项入场动画
+     ========================================================== */
+  const awards = Array.from(document.querySelectorAll('.award'));
+
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (!entry.isIntersecting) return;
+        const el  = entry.target;
+        const idx = awards.indexOf(el);
+        el.style.transitionDelay = (idx % 3) * 0.09 + 's';
+        el.classList.add('in');
+        io.unobserve(el);
+      });
+    }, { threshold: 0.14, rootMargin: '0px 0px -6% 0px' });
+
+    awards.forEach(function (a) { io.observe(a); });
+  } else {
+    awards.forEach(function (a) { a.classList.add('in'); });
+  }
+})();
+</script>
+</body>
+</html>
